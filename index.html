@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link href="main.css" rel="stylesheet" media="all">
+    <meta name="description" content="Joint-AEC-Beamformer" />
+    <meta name="keywords" content="acoustic echo cancellation, muti-channel processing, deep neural networks, beamforming, speech enhancement">
+    <script>
+    function buttonSwitch(id, text) {
+        old_src = document.getElementById(id).src;
+        ind = old_src.lastIndexOf('/');
+        document.getElementById(id).src = old_src.substr(0, ind + 1) + text;
+    }
+    </script>
+    <title>Joint-AEC-and-Beamforming</title>
+</head>
+
+
+
+
+<body>
+    <div id="top_arrow" style="position: fixed; bottom: 10px; right: 10px;">
+        <a href="#title"><img src="./figures/top_arrow.jpg" style="border: 0pt none ; width: 26px; height: 26px;"/></a>
+    </div>
+    
+    <!-- <p  style="margin-bottom:3cm;">"  "</p> -->
+    <h2 id="title" class="auto-style1"><center> JOINT AEC AND BEAMFORMING with Double-Talk Detection using RNN-Transformer </center></h2>
+    <p class="auto-style7" align="center">
+        <a href="https://github.com/vkothapally" target="_blank">Vinay Kothapally</a>
+        <sup>1</sup> &nbsp;&nbsp;&nbsp;
+        <a href="https://scholar.google.com/citations?user=nCmKPM4AAAAJ&hl=en&oi=ao" target="_blank">Yong Xu</a>
+        <sup>2</sup> &nbsp;&nbsp;&nbsp;
+        <a href="https://scholar.google.com/citations?user=pxFJcEEAAAAJ&hl=en&oi=ao" target="_blank">Meng Yu</a>
+        <sup>3</sup> &nbsp;&nbsp;&nbsp;
+        <a href="https://scholar.google.com/citations?user=4nGncN4AAAAJ&hl=en" target="_blank">Shi-Xiong Zhang</a>
+        <sup>4</sup> &nbsp;&nbsp;&nbsp;
+        <a href="https://scholar.google.com/citations?user=tMY31_gAAAAJ&hl=en" target="_blank">Dong Yu</a>
+        <sup>5</sup> &nbsp;&nbsp;&nbsp;
+    </p>
+    <p class="auto-style7" align="center">
+        <sup>1</sup> Center for Robust Speech Systems (CRSS), The University of Texas at Dallas, Texas, USA
+        <sup>2,3,4,5</sup> Tencent AI Lab, Bellevue, WA, USA
+    </p>
+
+
+    <!--<p class="auto-style7"  align="center">&nbsp;&nbsp;&nbsp; </p>-->
+    <p align=left>&nbsp;</p>
+    <p align="center">
+
+        <!-- Image with description -->
+        <table style="width:1100px" align="center">
+            <tr><td><img width=1100px alt="" src="figures/proposed_network.png"></td></tr>
+            <tr><td><p align="justify" class="auto-style5-j">Figure 1. Overview of all deep learning based joint echo cancellation and beamformer trained using time-domain scale-invariant SNR.</p></td></tr>
+        </table>
+
+        <!-- Abstract -->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Abstract</u></span></strong></p>
+        <p align="justify" class="auto-style5-j">
+          Acoustic echo cancellation (AEC) is a technique used in full-duplex communication systems to eliminate acoustic feedback of far-end speech. However, their performance degrades in naturalistic environments due to nonlinear distortions introduced by the speaker, as well as background noise, reverberation, and double-talk scenarios. To address nonlinear distortions and co-existing background noise, several deep neural network (DNN)-based joint AEC and denoising systems were developed. These systems are based on either purely ``black-box'' neural networks or ``hybrid'' systems that combine traditional AEC algorithms with neural networks. We propose an all-deep-learning framework that combines multi-channel AEC and our recently proposed self-attentive recurrent neural network (RNN) beamformer. We propose an all-deep-learning framework that combines multi-channel AEC and our recently proposed self-attentive recurrent neural network (RNN) beamformer. Furthermore, we propose a double-talk detection transformer (DTDT) module based on the multi-head attention transformer structure that computes attention over time by leveraging frame-wise double-talk predictions. Experiments show that our proposed method outperforms other approaches in terms of improving speech quality and speech recognition rate of an ASR system.
+        </p>
+
+
+        <!-- Key Contributions -->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Key contributions</u></span></strong></p>
+        <p align="justify" class="auto-style5-j">
+        <ol>
+          <li>Optimal Smoothing as preprocessing for training samples</li>
+          <li>Complex-valued convolutional blocks within skip-connections</li>
+          <li>Complex-valued Self-Attention along time and frequency dimensions</li>
+          <li>Complex-valued Patch Discriminator with Feature loss</li>
+        </ol>
+        </p>
+
+
+        <!-- Results Spectrograms-->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>SkipConvGAN aims to use Adversarial Trainging to regenerate lost Formant Structure</u></span></strong></p>
+        <p align="justify" class="auto-style5-j">
+        <tr><td><center><img height="260" alt="" src="figures/FormantEnhancement.png"></center></td></tr>
+        </p>
+        
+        
+        <!-- Results -->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Results on speech quality metrics</u></span></strong></p>
+        <p align="justify" class="auto-style5-j">
+        <center><img src="results/Results_Table.png" width="840" /></center>
+        </p>
+
+        <!-- Pyhton Packages -->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Python packages used in this study (Metrics, Baselines, GAN-training, etc)</u></span></strong></p>
+        <ol>
+          <li>Speech Metrics are computed using the following python package (<a href="https://github.com/vkothapally/pysepm" target="_blank">pysepm</a>)</li>
+          <li>Optimal Time-Frequency Smoothing of PSD  (<a href="https://github.com/eesungkim/Voice_Activity_Detector/blob/master/utils/estnoise_ms.py" target="_blank">smoothPSD</a>)</li>
+          <li>Baseline-WPE (<a href="https://github.com/fgnt/nara_wpe" target="_blank">nara-wpe</a>)</li>
+          <li>Baseline-LPC Residual Enhancement (<a href="https://github.com/shamim-hussain/speech_dereverbaration_using_lp_residual" target="_blank">lpc-residual</a>)</li>
+          <li>Baseline-FSEGAN (<a href="https://github.com/lifelongeek/AAS_enhancement" target="_blank">fsegan</a>)</li>
+          <li>Baseline-MetricGAN (<a href="https://github.com/speechbrain/speechbrain/blob/develop/speechbrain/lobes/models/MetricGAN.py" target="_blank">metricgan</a>)</li>
+          <li>GAN-Training Toolkit (<a href="https://github.com/torchgan/torchgan" target="_blank">torchgan</a>)</li>
+        </ol>
+
+
+        <!-- Optimal Smoothing -->
+        <p class="auto-style5">&nbsp;</p>
+        <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Optimal Smoothing as Preprocessing</u></span></strong></p>
+        <p align="justify" class="auto-style5-j">
+          With the advancements in deep learning approaches, the performance of speech enhancing systems in the presence of background noise have shown significant improvements. However, improving the system's robustness against reverberation is still a work in progress, as reverberation tends to cause loss of formant structure due to smearing effects in time and frequency. A wide range of deep learning approaches systems either enhance the magnitude response and reuse the distorted phase or enhance complex spectrogram using a complex time-frequency mask. Though these approaches have demonstrated satisfactory performance, they do not directly address the lost formant structure caused by reverberation. We believe that retrieving the formant structure can help improve the efficiency of existing systems. In this study, we propose SkipConvGAN - an extension of our prior work SkipConvNet. The proposed system's generator network tries to estimate an efficient complex time-frequency mask, while the discriminator network aids in driving the generator to restore the lost formant structure. We evaluate the performance of our proposed system on simulated and real recordings of reverberant speech from the single-channel task of the  REVERB challenge corpus. The proposed system shows a consistent improvement across multiple room configurations over other deep learning-based generative adversarial frameworks.
+        
+        </p>
+
+        <center>
+        <table width="1375" border="1"><center>
+          <td width="271">
+            <p><center><img src="specs/PSD_original.png" width="271" height="210" /></center></p>
+            <p><center><strong>Reverberant LPS</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/Smoothing_params.png" width="271" height="210" /></center></p>
+            <p><center><strong>Time-Freq. varying smoothing paramter</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/PSD_smoothed.png" width="271" height="210" /></center></p>
+            <p><center><strong>Optimal Smoothed Reverberant LPS</strong></center></p>
+          </td>
+        </center>
+        </table>
+        </center>
+
+        <!-- Downloadables -->
+        <!-- <p class="auto-style5">&nbsp;</p>
+        <p id="downloads" , class="auto-style4", style="color:blue;"><strong>Download</strong></p>
+        <table cellSpacing=1 cellPadding=1 border=0 style="width: 90%">
+            <tr COLSPAN="1">
+                <td align="center" valign="center">
+                    <img style="padding:0; clear:both; " src="figures/paper_thumbnail.png" align="middle" alt="Snapshot for paper" class="pdf" width="200" />
+                </td>
+                <td align="left" class="auto-style5">"SkipConvGAN: A Monaural Speech Dereverberation &quot;
+                    <br> Vinay Kothapally, John H.L. Hansen.
+                    <br>
+                    <em>Submitted to IEEE Transactions </em> (<b>IEEE</b>), 2021.</br>
+                    <br>
+                    <img alt="" height="32" src="figures/pdf.png">&nbsp;[<a href="https://arxiv.org/abs/1612.01105">Arxiv Paper</a>]&nbsp;&nbsp;[<a href="../../papers/cvpr17_pspnet_bib.txt">Bib</a>]
+                    <br>
+                    <br>
+                    <img alt="" height="32" src="figures/github.png">&nbsp;[<a href="https://github.com/hszhao/semseg">PyTorch</a>]
+                    <br>
+                    <br> -->
+                    <!--<img alt="" height="32" src="figures/ppt.gif">&nbsp;&nbsp;[<a href="./papers/pspnet_slides.pdf">Slides</a>]&nbsp;&nbsp;[<a href="./papers/pspnet_poster.pdf">Poster</a>]<br><br>-->
+                    <!--<img alt="" height="32" src="figures/ppt.png">&nbsp;&nbsp;[<a href="http://image-net.org/challenges/talks/2016/SenseCUSceneParsing.pdf">Slides in ILSVRC2016@ECCV2016</a>] -->
+                <!-- </td>
+            </tr>
+        </table>
+        <br> -->
+
+        <!-- Performance -->
+        <p class="auto-style5">&nbsp;</p>
+        <p id="performance" , class="auto-style4", style="color:blue;"><strong><u>Enhanced audio samples from various Speech Dereverberation Systems</u></strong></p>
+
+        <p><strong><u>Audio Samples: [Dimensions: 40x50x5  &nbsp;&nbsp; ReverbTime: 300 ms &nbsp;&nbsp; Microphone Distance: 2m]</u></strong></p>
+
+        <center>
+        <table width="1375" border="1">
+          <td width="271">
+            <p><center><img src="specs/01_reverb.png" height="210" /></center></p>
+            <p><center><audio width="271" controls><source src="audio/01_reverb.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>Reverberant Speech</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/02_wpe.png" height="210" /></center></p>
+            <p><center><audio width="271" controls><source src="audio/02_wpe.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>WPE - 1Ch</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/03_lpc.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/03_lpc.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>LPC Residual Enhancement</strong></center></p>
+          </td>
+        </table>
+        </center>
+        
+
+        <center>
+        <table width="1375" border="1">
+          <td width="271">
+            <p><center><img src="specs/04_skipconvnet.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/04_skipconvnet.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>SkipConvNet (Enhances Mag. only) </strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/05_fsegan.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/05_fsegan.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>FSEGAN</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/06_metricgan.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/06_metricgan.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>MetricGAN</strong></center></p>
+          </td>
+        </table>
+        </center>
+          
+        <center>
+        <table width="1375" border="1">
+          <td width="271">
+            <p><center><img src="specs/07_proposed.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/07_proposed.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>Proposed SkipConvGAN</strong></center></p>
+          </td>
+          <td width="271">
+            <p><center><img src="specs/08_clean.png" height="210"  /></center></p>
+            <p><center><audio width="271" controls><source src="audio/08_clean.wav" type="audio/wav" >Your browser does not support the audio element.</audio></center></p>
+            <p><center><strong>Reference Clean Speech</strong></center></p>
+          </td>
+        </table>
+        </center>
+        
+
+
+        
+
+        <p class="auto-style5">&nbsp;</p>
+        <p id="reference" , class="auto-style4", style="color:blue;"><strong><u>References</u></strong></p>
+        <p id="ref_1" class="auto-style5">
+            [1] F. Yu and V. Koltun. Multi-scale context aggregation by dilated convolutions. In ICLR, 2016.
+            <br> [2] J. Long, E. Shelhamer, and T. Darrell. Fully convolutional networks for semantic segmentation. In CVPR, 2015.
+            <br> [3] V. Badrinarayanan, A. Kendall, and R. Cipolla. Segnet: A deep convolutional encoder-decoder architecture for image segmentation. arXiv:1511.00561, 2015.
+            <br> [4] M. Mostajabi, P. Yadollahpour, and G. Shakhnarovich. Feedforward semantic segmentation with zoom-out features. In CVPR, 2015.
+            <br> [5] L. Chen, G. Papandreou, I. Kokkinos, K. Murphy, and A. L. Yuille. Semantic image segmentation with deep convolutional nets and fully connected crfs. In ICLR, 2015.
+            <br> [6] S. Zheng, S. Jayasumana, B. Romera-Paredes, V. Vineet, Z. Su, D. Du, C. Huang, and P. H. S. Torr. Conditional random fields as recurrent neural networks. In ICCV, 2015.
+            <br> [7] H. Noh, S. Hong, and B. Han. Learning deconvolution network for semantic segmentation. In ICCV, 2015.
+            <br> [8] R. Vemulapalli, O. Tuzel, M.-Y. Liu, and R. Chellappa. Gaussian conditional random field network for semantic segmentation. In CVPR, 2016.
+            <br> [9] Z. Liu, X. Li, P. Luo, C. C. Loy, and X. Tang. Semantic image segmentation via deep parsing network. In ICCV, 2015.
+            <br> [10] G. Lin, C. Shen, I. D. Reid, and A. van den Hengel. Efficient piecewise training of deep structured models for semantic segmentation. In CVPR, 2016.
+            <br> [11] J. Dai, K. He, and J. Sun. Boxsup: Exploiting bounding boxes to supervise convolutional networks for semantic segmentation. In ICCV, 2015.
+            <br> [12] Z. Wu, C. Shen, and A. van den Hengel. Bridging category-level and instance-level semantic image segmentation. arXiv:1605.06885, 2016.
+            <br> [13] G. Ghiasi and C. C. Fowlkes. Laplacian pyramid reconstruction and refinement for semantic segmentation. In ECCV, 2016.
+            <br> [14] L. Chen, G. Papandreou, I. Kokkinos, K. Murphy, and A. L. Yuille. Deeplab: Semantic image segmentation with deep convolutional nets, atrous convolution, and fully connected crfs. arXiv:1606.00915, 2016.
+            <br> [15] I. Kreso, D. Causevic, J. Krapac, and S. Segvic. Convolutional scale invariance for semantic segmentation. In GCPR, 2016.
+            <br>
+        </p>
+        <p class="auto-style1"><font color="#999999">Last update: Dec. 26, 2021</font></p>
+</body>
+
+</html>
