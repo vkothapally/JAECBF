@@ -221,14 +221,13 @@ class RNNBF(nn.Module):
         # Feature Extraction - Covariance Matirx of (Mixture + EchoRef)
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         if verbose: print('*'*90)
-        if verbose: print('Input Audio Shape       : ', x.shape)
+        if verbose: print('Input Audio Shape            : ', x.shape)
         if verbose: print('*'*90)
         
-        if verbose: print('Mixture                 : ', real.shape)
-        if verbose: print('Echo Ref                : ', real_echo.shape)
+        if verbose: print('Mixture, Echo Ref            : ', real.shape, real_echo.shape)
         real_mix_echo, imag_mix_echo = th.cat((real,real_echo),1), th.cat((imag,imag_echo),1)
         cplx_mix_echo = ComplexTensor(real_mix_echo, imag_mix_echo)
-        if verbose: print('Complex Microphone Sig. : ', cplx_mix_echo.real.shape, cplx_mix_echo.imag.shape)
+        if verbose: print('Complex Mic+Echo Sig.        : ', cplx_mix_echo.real.shape, cplx_mix_echo.imag.shape)
         
 
         spatial_psd    = get_power_spectral_density_matrix_self_with_cm_t(cplx_mix_echo.permute(0,2,1,3))[...,self.spatial_idx[0],self.spatial_idx[1]] 
@@ -236,7 +235,7 @@ class RNNBF(nn.Module):
         b,f,t,e        = spatial_psd.shape
         spatial_psd    = spatial_psd.reshape(b*f,t,e).transpose(1,2)
         spatial_psd  = self.conv1x1_1(self.attn_spatial(spatial_psd,spatial_psd,spatial_psd).reshape(b,-1,t))
-        if verbose: print('Mix+Echo Spatial PSD    : ', spatial_psd.shape)
+        if verbose: print('Mix+Echo Spatial PSD         : ', spatial_psd.shape)
 
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         # Deep Learning based Multi-Channel Acoustic Echo Canceller --- Outputs [mix h1*mix h2*echo] (8+8+1--> 17 channels)
@@ -245,7 +244,7 @@ class RNNBF(nn.Module):
         if verbose: print('Multi-Channel Acoustic Echo Cancellation')
         if verbose: print('-'*60)
         spatial_feats  = self.gru_encoder(spatial_psd.transpose(1,2)).transpose(1,2)
-        if verbose: print('Spatial Encoded Feats   : ', spatial_feats.shape)
+        if verbose: print('Spatial Encoded Feats        : ', spatial_feats.shape)
         
         # Apply 8-channel filters for the echo_ref too and sum 8 channels of mixture and echo_ref -- Dr. Xu
         b,f,t = spatial_feats.shape
@@ -253,22 +252,21 @@ class RNNBF(nn.Module):
         cRM_mix_real = self.cRM_mix_real(spatial_feats).transpose(1,2).reshape(b,t,f,self.nmics,-1).permute(0,3,2,1,4)
         cRM_mix_imag = self.cRM_mix_imag(spatial_feats).transpose(1,2).reshape(b,t,f,self.nmics,-1).permute(0,3,2,1,4)
         cRM_mix      = ComplexTensor(cRM_mix_real,cRM_mix_imag)
-        if verbose: print('Deep Filters for  Mix   : ', cRM_mix.real.shape,cRM_mix.imag.shape)
+        if verbose: print('[AEC] cRF for  Mix           : ', cRM_mix.real.shape,cRM_mix.imag.shape)
         
         cRM_echo_real = self.cRM_echo_real(spatial_feats).transpose(1,2).reshape(b,t,f,1,-1).permute(0,3,2,1,4)
         cRM_echo_imag = self.cRM_echo_imag(spatial_feats).transpose(1,2).reshape(b,t,f,1,-1).permute(0,3,2,1,4)
         cRM_echo      = ComplexTensor(cRM_echo_real, cRM_echo_imag)
-        if verbose: print('Deep Filters for  Echo  : ', cRM_echo.real.shape, cRM_echo.imag.shape)
+        if verbose: print('[AEC] cRF for  Echo          : ', cRM_echo.real.shape, cRM_echo.imag.shape)
 
         cplx_aec_mix,  aec_mix_real, aec_mix_imag   =  self.apply_df_filters(cRM_mix,  real, imag, t_roll=[-1,0], f_roll=[0], channels=True)
         cplx_aec_echo, aec_echo_real, aec_echo_imag =  self.apply_df_filters(cRM_echo, real_echo, imag_echo, t_roll=[-1,0], f_roll=[0], channels=True)
-        if verbose: print('AEC Output of cRM Mix   : ', aec_mix_real.shape, aec_mix_imag.shape)
-        if verbose: print('AEC Output of cRM Echo  : ', aec_echo_real.shape, aec_echo_imag.shape)
+        if verbose: print('[AEC Out] Mix_h, Echo_h      : ', aec_mix_real.shape, aec_echo_real.shape)
         
         mix_aecout_real = th.cat((real, aec_mix_real, aec_echo_real),1) #.permute(0,2,3,1)
         mix_aecout_imag = th.cat((imag, aec_mix_imag, aec_echo_imag),1) #.permute(0,2,3,1)
         
-        if verbose: print('[Mix, Mix_hat, Echo]    : ', mix_aecout_real.shape, mix_aecout_imag.shape)
+        if verbose: print('[Mix, Mix_h, Echo_h]         : ', mix_aecout_real.shape, mix_aecout_imag.shape)
         real_aec, imag_aec = mix_aecout_real, (mix_aecout_imag + 1e-10)
         cplx_aec = ComplexTensor(real_aec, imag_aec)
 
@@ -276,7 +274,7 @@ class RNNBF(nn.Module):
         # Deep Filtering based cRM filter estimation --- Used to compute Speech and Noise Covariane Matrices (17x17)
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         if verbose: print('-'*60)
-        if verbose: print('Speech and Noise Covariance Matrices')
+        if verbose: print('Joint Spatial RNN-Beamformer')
         if verbose: print('-'*60)
 
         audiofeats   = get_power_spectral_density_matrix_self_with_cm_t(cplx_aec.permute(0,2,1,3))[...,self.aecfeat_idx[0],self.aecfeat_idx[1]] 
@@ -285,19 +283,22 @@ class RNNBF(nn.Module):
         audiofeats   = audiofeats.reshape(b*f,t,e).transpose(1,2)
         audiofeats   = self.attn_aecout(audiofeats,audiofeats,audiofeats)
         audiofeats   = self.conv1x1_2(audiofeats.reshape(b,-1,t))
-        if verbose: print('Cross-Ch. Corr. [24]    : ', audiofeats.shape)
-        
+        if verbose: print('JRNN-BF Input                : ', mix_aecout_real.shape, mix_aecout_imag.shape)
+        if verbose: print('Spatial Features + Attention : ', audiofeats.shape)
+
+        if verbose: print(' ')
+        if verbose: print('Multi-Channel Speech/Noise PSD Computation')
+        if verbose: print('-'*45)
         # Inputs to CRM Filter Design (y_targ, y_noise) : B x 128 x T
         y_targ       = self.gru_target(audiofeats.transpose(1,2)).transpose(1,2)    
         y_noise      = self.gru_noise(audiofeats.transpose(1,2)).transpose(1,2)    
 
         # Deep Filter-01 for Mixture signals -------------------- SPEECH ---------------------
         cRM_speech_mask = ComplexTensor(self.permute_mask(self.conv1x1_speech_mask_mix_real(y_targ)), self.permute_mask(self.conv1x1_speech_mask_mix_imag(y_targ))+ 1e-10)
-        if verbose: print('Speech cRM [AEC Out]    : ', cRM_speech_mask.real.shape, cRM_speech_mask.imag.shape)
-        
         # Deep Filter-01 for Mixture signals -------------------- NOISE ---------------------
         cRM_noise_mask = ComplexTensor(self.permute_mask(self.conv1x1_noise_mask_mix_real(y_noise)), self.permute_mask(self.conv1x1_noise_mask_mix_imag(y_noise))+ 1e-10)
-        if verbose: print('Noise cRM  [AEC Out]    : ', cRM_noise_mask.real.shape, cRM_noise_mask.imag.shape)
+        if verbose: print('cRM - Speech/Noise Est       : ', cRM_speech_mask.real.shape, cRM_speech_mask.imag.shape)
+        
         
         _, est_speech_real,     est_speech_imag        = self.apply_df_filters(cRM_speech_mask, real_aec, imag_aec, t_roll=[-1,0], f_roll=[0])
         _, est_noise_real,      est_noise_imag         = self.apply_df_filters(cRM_noise_mask,  real_aec, imag_aec, t_roll=[-1,0], f_roll=[0])
@@ -305,14 +306,11 @@ class RNNBF(nn.Module):
         est_speech_cplx = ComplexTensor(est_speech_real, est_speech_imag).transpose(1,2)
         est_noise_cplx  = ComplexTensor(est_noise_real,  est_noise_imag).transpose(1,2)
 
-        if verbose: print('Noise Estimation        : ', (est_speech_cplx.real.shape, est_speech_cplx.imag.shape))
-        if verbose: print('Speech Estimation       : ', (est_noise_cplx.real.shape, est_noise_cplx.real.shape))
-
+        if verbose: print('Multi-Ch Speech/Noise Est.   : ', (est_speech_cplx.real.shape, est_speech_cplx.imag.shape))
+        
         speech_PSD = get_power_spectral_density_matrix_self_with_cm_t(est_speech_cplx)
         noise_PSD  = get_power_spectral_density_matrix_self_with_cm_t(est_noise_cplx) #[B,F,T,C,C]
-        if verbose: print('Speech PSD Matrix       : ', (speech_PSD.real.shape, speech_PSD.imag.shape))
-        if verbose: print('Noise PSD Matrix Inv.   : ', (noise_PSD.real.shape, noise_PSD.imag.shape))
-        
+        if verbose: print('Speech/Noise PSD Matrix      : ', (speech_PSD.real.shape, speech_PSD.imag.shape))
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         
 
@@ -322,50 +320,44 @@ class RNNBF(nn.Module):
         # Deep Learning based Beamforming weight Computation
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         if verbose: print(' ')
-        if verbose: print('-'*60)
-        if verbose: print('MVDR Beamforming Using PSD Matrices')
-        if verbose: print('-'*60)
+        if verbose: print('Beamformer Weight Computation')
+        if verbose: print('-'*30)
         
         speech_PSD      = th.cat((speech_PSD.real.flatten(-2), speech_PSD.imag.flatten(-2)),dim=-1)
         noise_PSD       = th.cat((noise_PSD.real.flatten(-2),  noise_PSD.imag.flatten(-2)), dim=-1)
-        if verbose: print('Speech PSD Flatten      : ', speech_PSD.shape)
-        if verbose: print('Noise PSD Inv. Flatten  : ', noise_PSD.shape)
-
         PSDs_flatten    = self.both_ln(th.cat([noise_PSD,speech_PSD],dim=-1))
-        if verbose: print('PSDs Combined Flatten   : ', PSDs_flatten.shape)
+        if verbose: print('PSDs Combined + Flat + LNorm : ', PSDs_flatten.shape)
 
         ws_per_frame    = Fn.leaky_relu(self.Dense_pca1(PSDs_flatten))
-        if verbose: print('Dense PCA-01            : ', ws_per_frame.shape)
+        if verbose: print('Linear PCA [Dim. Reduction]  : ', ws_per_frame.shape)
 
         b,f,t,e = ws_per_frame.shape
         ws_per_frame    = self.GRU_pca_h1(ws_per_frame.reshape(b*f,t,self.hid_dim))[0].reshape(b,f,t,self.hid_dim)
-        if verbose: print('GRU PCA                 : ', ws_per_frame.shape)
+        if verbose: print('GRU on Low Dim. Features     : ', ws_per_frame.shape)
 
         # Self-Attention for GRU Encoded features 
         b,f,t,e = ws_per_frame.shape
         ws_per_frame    = ws_per_frame.reshape(b*f,t,e).transpose(1,2)
         ws_per_frame    = self.attn_Gpca1(ws_per_frame,ws_per_frame,ws_per_frame)
         ws_per_frame    = ws_per_frame.transpose(1,2).reshape(b,f,t,e)
-        if verbose: print('SA on GRU-PCA Feats     : ', ws_per_frame.shape)
+        if verbose: print('SA on PCA-GRU Features       : ', ws_per_frame.shape)
 
         ws_per_frame    = self.Dense_pca2(ws_per_frame)
-        if verbose: print('Dense PCA-02            : ', ws_per_frame.shape)
-
         # Self-Attention for GRU Encoded features 
         b,f,t,e = ws_per_frame.shape
         # ws_per_frame    = ws_per_frame.reshape(b*f,t,e).transpose(1,2)
         ws_per_frame    = self.dtd_attn(ws_per_frame,ws_per_frame,ws_per_frame)
         # ws_per_frame    = ws_per_frame.transpose(1,2).reshape(b,f,t,e)
-        if verbose: print('DTD-SA on Dense Feats   : ', ws_per_frame.shape)
+        if verbose: print('RNN-based DTST Module        : ', ws_per_frame.shape)
 
         ws_per_frame    = ComplexTensor(ws_per_frame[:,:,:,:est_noise_cplx.size(2)],ws_per_frame[:,:,:,est_noise_cplx.size(2):])
-        if verbose: print('Beamformer Weights      : ', ws_per_frame.real.shape, ws_per_frame.imag.shape)
+        if verbose: print('JRNN_AEC_BF_DTDT Weights     : ', ws_per_frame.real.shape, ws_per_frame.imag.shape)
 
         cplx_bf_input = cplx_aec.transpose(1,2)
-        if verbose: print('Cplx Original + AEC_Out : ', cplx_bf_input.real.shape, cplx_bf_input.imag.shape)
+        if verbose: print('Cplx Mic. + AEC processed    : ', cplx_bf_input.real.shape, cplx_bf_input.imag.shape)
 
         bf_enhanced = apply_beamforming_vector(ws_per_frame, cplx_bf_input) # mc_complex (B,F,C*2,T)
-        if verbose: print('Beamformer Output       : ', (bf_enhanced.real.shape, bf_enhanced.imag.shape))
+        if verbose: print('JRNN_AEC_BF_DTDT Output      : ', (bf_enhanced.real.shape, bf_enhanced.imag.shape))
 
         
         #----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -389,7 +381,7 @@ if __name__=='__main__':
     x           = th.Tensor(np.random.randn(1,8,64000)).to('cuda')
     echo        = th.Tensor(np.random.randn(1,64000,)).to('cuda')
     est, bf_enhanced_mag = model(x, echo, verbose=True)
-    print('\n\n--------------------------------- Script Inputs and Outputs :: Summary')
+    print('--------------------------------- Script Inputs and Outputs :: Summary')
     print('Input Mix audio  : ', x.shape)
     print('Input echo ref   : ', echo.shape)
     print('Output Estimated : ', est.shape)
