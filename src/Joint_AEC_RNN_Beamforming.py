@@ -11,14 +11,15 @@
 
 
 import numpy as np
-from conf import *
 import torch as th
 import torch.nn as nn
 import functional as FC
-from beamformer_cm import *
+from utils import *
+from utils import iSTFT
 from tensor import ComplexTensor
 import torch.nn.functional as Fn
-from audio_fea import DFComputer, iSTFT
+
+
 th.manual_seed(1187)
 np.random.seed(1187)
 
@@ -29,33 +30,6 @@ def param(nnet, Mb=True):
     neles = sum([param.nelement() for param in nnet.parameters()])
     return neles / 10**6 if Mb else neles
 
-class Conv1D(nn.Conv1d):
-    def __init__(self, *args, **kwargs):
-        super(Conv1D, self).__init__(*args, **kwargs)
-
-    def forward(self, x, squeeze=False):
-        if x.dim() not in [2, 3]:
-            raise RuntimeError("{} accept 2/3D tensor as input".format(
-                self.__name__))
-        x = super().forward(x if x.dim() == 3 else th.unsqueeze(x, 1))
-        if squeeze:
-            x = th.squeeze(x)
-        return x
-
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-        self._name = 'Identity'
-    def forward(self, x): return x
-
-class SelectItem(nn.Module):
-    def __init__(self, item_index):
-        super(SelectItem, self).__init__()
-        self._name = 'selectitem'
-        self.item_index = item_index
-
-    def forward(self, inputs):
-        return inputs[self.item_index]
 
 class SelfAttention(nn.Module):
     def __init__(self, embed_dim, num_heads, output_dim, locations=[None,None], dropout=0.0, bias=True, batch_first=True):
@@ -84,7 +58,7 @@ class SelfAttention(nn.Module):
         attn_output, attn_output_weights = self.attn(q, k, v, attn_mask=attn_mask)
         attn_output = self.lnorm1((v + attn_output).permute(1,0,2))
         attn_output = Fn.relu(self.lnorm2(self.linear(attn_output))).transpose(1,2)
-        return attn_output #, attn_output_weights
+        return attn_output
 
 
 class DTD_Attention(nn.Module):
@@ -119,44 +93,14 @@ class DTD_Attention(nn.Module):
 
 
 class RNNBF(nn.Module):
-    """
-    GRU based RNN Beamforming
-    """
-
     def __init__(
-            self,
-            # audio conf
-            L=512,
-            N=256,
-            X=8,
-            R=4,
-            B=256,
-            H=512,
-            P=3,
-            F=256,
-            cos=True,
-            ipd=""):
+            self, L=512, N=256, X=8, R=4, B=256, H=512, P=3, F=256, cos=True, ipd=""):
         super(RNNBF, self).__init__()
 
         self.cos = cos
-
-        self.modelname = 'AEC_DTDSA_RNNBF5 v2 -- Dr.Yong Xu additions'
-        self.description = '\t1. AEC is performed using GRU+FC and Deep Filtering \n'+ \
-                           '\t2. Global Self-Attention to updates the AEC Deep Filtering weights \n'+ \
-                           '\t2. Three different Masks are applied for Mix, h1*Mix, and h2*Echo \n'+ \
-                           '\t3. AEC Output is Linear Combination of Mix, h1*Mix, and h2*Echo \n'+ \
-                           '\t3. PSDs (8x8 matirces) are used by RNNBF for spatial Filtering\n'+\
-                           '\t5. Self-Attention Modules introduced into RNNBF after Dense PCA and GRU PCA\n'
-
-
-        self.df_computer = DFComputer(frame_hop=L // 2,
-                                      frame_len=L,
-                                      in_feature=['LPS', 'IPD'],
-                                      merge_mode='sum',
-                                      cosIPD=True,
-                                      sinIPD=False,
-                                      speaker_feature_dim=1)
-        dim_conv = self.df_computer.df_dim
+        self.modelname = 'Joint-AEC-and-Beamforming-DTD-RNN-Transformer'
+        self.df_computer = MultiChannelSTFT()
+        dim_conv = 257
         self.nmics = X
         self.ntaps = 2
         
@@ -206,10 +150,8 @@ class RNNBF(nn.Module):
 
 
         print('-'*90)
-        print('Using AEC_DTDSA_RNNBF5 v2 -- AEC [h1 h2]*[mix echo]')
-        print('Model Size [params.] : ',str(np.round(param(self, Mb=True),2))+' M')
-        print('Model saved to : '+self.modelname)
-        print('Model Description : \n'+self.description)
+        print('Model                   : '+self.modelname)
+        print('Trainable params.       : ',str(np.round(param(self, Mb=True),2))+' M')
         print('-'*90)
 
     def get_lps(self, real,imag):
@@ -240,10 +182,6 @@ class RNNBF(nn.Module):
         imag_tf_shift = th.stack([th.roll(imag,(i,j),dims=(2,3)) for i in t_roll for j in f_roll],4).transpose(-1,-2)
         imag_tf_shift += 1e-10
         
-        # Use Deep Filters are B X 257 x T X filter_delay(2)
-        # Use real and imag parts such that each are in the shape B x channels x 257 x filter_delay(2) x T 
-        # To produce filter output y_complex using 'apply_cRM_filter' operation
-        # Operation :: (B x 257 x T x 2)^H * (B x channels x 257 x 2 x T) ---> (B x channels x 257 x T) [All tensors are complex here]
         y_complex = ComplexTensor(real_tf_shift, imag_tf_shift) #[B,C,F,T]
         if channels == True:
             est_complex = FC.einsum('bcftd,befdt->bcft', [filter.conj(), y_complex])
@@ -265,10 +203,7 @@ class RNNBF(nn.Module):
         rxx = rxx.permute(0,2,3,1,4).reshape(b,f,t,-1) # B,C,F,T,rxx --> B,F,T,C*rxx
         return rxx
     
-    def forward(self, x, echo, directions, spk_num, aecout=False, verbose=False):
-        """
-        x: raw waveform chunks, N x C
-        """
+    def forward(self, x, echo, aecout=False, verbose=False):
         if x.dim() not in [2, 3]:
             raise RuntimeError(
                 "{} accept 2/3D tensor as input, but got {:d}".format(
@@ -280,7 +215,7 @@ class RNNBF(nn.Module):
             spk_num = th.unsqueeze(spk_num, 0)
             directions = th.unsqueeze(directions, 0)
        
-        mix_echo_phase_features, mag, phase, real, imag, real_echo, imag_echo = self.df_computer([x, echo, directions, spk_num])
+        real, imag, real_echo, imag_echo = self.df_computer([x, echo])
         
         #----------------------------------------------------------------------------------------------------------------------------------------------------
         # Feature Extraction - Covariance Matirx of (Mixture + EchoRef)
@@ -439,7 +374,8 @@ class RNNBF(nn.Module):
         bf_enhanced = ComplexTensor(bf_enhanced.real, bf_enhanced.imag+1.0e-10)
         bf_enhanced_mag, bf_enhanced_phase = bf_enhanced.abs(), bf_enhanced.angle()
         
-        est = self.istft(bf_enhanced_mag, bf_enhanced_phase, squeeze=True)
+
+        est = self.istft(bf_enhanced_mag, bf_enhanced_phase, squeeze=False)
         if verbose: print('*'*90)
         if verbose: print('Output Audio Shape      : ', est.shape)
         if verbose: print('*'*90)
@@ -450,22 +386,15 @@ class RNNBF(nn.Module):
 
 if __name__=='__main__':
     model = RNNBF().to('cuda')
-    x           = th.Tensor(np.random.randn(3,8,64000)).to('cuda')
-    echo        = th.Tensor(np.random.randn(3,64000,)).to('cuda')
-    directions  = th.Tensor(np.array([180 * np.pi / 180, 360 * np.pi / 180])).unsqueeze(0).to('cuda')
-    spk_num     = th.LongTensor(np.ones(3,)).to('cuda')
-    est, bf_enhanced_mag = model(x, echo, directions, spk_num, verbose=True, aecout=False)
+    x           = th.Tensor(np.random.randn(1,8,64000)).to('cuda')
+    echo        = th.Tensor(np.random.randn(1,64000,)).to('cuda')
+    est, bf_enhanced_mag = model(x, echo, verbose=True)
     print('\n\n--------------------------------- Script Inputs and Outputs :: Summary')
     print('Input Mix audio  : ', x.shape)
     print('Input echo ref   : ', echo.shape)
-    print('Input directions : ', directions.shape)
-    print('Input spk_num    : ', spk_num.shape)
     print('Output Estimated : ', est.shape)
     print('Output Est Mag   : ', bf_enhanced_mag.shape)
     print('--------------------------------------------------------------------------\n')
     print('Done!')
 
-    # model = DTD_Attention(embed_dim=8, num_heads=1, output_dim=8, locations=[None,None], dropout=0.0, bias=True, batch_first=True).to('cuda')
-    # x     = th.Tensor(np.random.randn(3,8,10)).to('cuda')    
-    # y = model(x,x,x)
-    # print(x.shape, y.shape)
+    
