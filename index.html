@@ -25,7 +25,7 @@
     </div>
     
     <!-- <p  style="margin-bottom:3cm;">"  "</p> -->
-    <h2 id="title" class="auto-style1"><center> JOINT AEC AND BEAMFORMING with Double-Talk Detection using RNN-Transformer </center></h2>
+    <h2 id="title" class="auto-style1"><center> Joint Neural AEC and Beamforming with Double-Talk Detection </center></h2>
     <p class="auto-style7" align="center">
         <a href="https://github.com/vkothapally" target="_blank">Vinay Kothapally</a>
         <sup>1</sup> &nbsp;&nbsp;&nbsp;
@@ -51,14 +51,14 @@
         <!-- Image with description -->
         <table style="width:1250px" align="center">
             <tr><td><center><img width=1250px alt="" src="figures/proposed_network.png"></center></td></tr>
-            <tr><td><p align="center" class="auto-style5-j">Figure 1. Overview of all deep learning based joint echo cancellation and beamformer trained using time-domain scale-invariant SNR.</p></td></tr>
+            <tr><td><p align="center" class="auto-style5-j">Figure 1. Architectural detials of all deep learning based joint echo cancellation and beamformer trained using time-domain scale-invariant SNR.</p></td></tr>
         </table>
 
         <!-- Abstract -->
         <p class="auto-style5">&nbsp;</p>
         <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Abstract</u></span></strong></p>
         <p align="justify" class="auto-style5-j">
-          Acoustic echo cancellation (AEC) is a technique used in full-duplex communication systems to eliminate acoustic feedback of far-end speech. However, their performance degrades in naturalistic environments due to nonlinear distortions introduced by the speaker, as well as background noise, reverberation, and double-talk scenarios. To address nonlinear distortions and co-existing background noise, several deep neural network (DNN)-based joint AEC and denoising systems were developed. These systems are based on either purely ``black-box'' neural networks or ``hybrid'' systems that combine traditional AEC algorithms with neural networks. We propose an all-deep-learning framework that combines multi-channel AEC and our recently proposed self-attentive recurrent neural network (RNN) beamformer. We propose an all-deep-learning framework that combines multi-channel AEC and our recently proposed self-attentive recurrent neural network (RNN) beamformer. Furthermore, we propose a double-talk detection transformer (DTDT) module based on the multi-head attention transformer structure that computes attention over time by leveraging frame-wise double-talk predictions. Experiments show that our proposed method outperforms other approaches in terms of improving speech quality and speech recognition rate of an ASR system.
+          Acoustic echo cancellation (AEC) in full-duplex communication systems eliminates acoustic feedback. However, nonlinear distortions induced by audio devices, background noise, reverberation, and double-talk reduce the efficiency of conventional AEC systems. Several hybrid AEC models were proposed to address this, which use deep learning models to suppress residual echo from standard adaptive filtering. This paper proposes deep learning-based joint AEC and beamforming model (JAECBF) building on our previous self-attentive recurrent neural network (RNN) beamformer. The proposed network consists of two modules: (i) multi-channel neural-AEC, and (ii) joint AEC-RNN beamformer with a double-talk detection (DTD) that computes time-frequency (T-F) beamforming weights. We train the proposed model in an end-to-end approach to eliminate background noise and echoes from far-end audio devices, which include nonlinear distortions. From experimental evaluations, we find the proposed network outperforms other multi-channel AEC and denoising systems in terms of speech recognition rate and overall speech quality.
         </p>
 
 
@@ -70,7 +70,7 @@
         <ol>
           <li>We propose using a joint spatial covariance matrix computed using microphone signals and far-end speech as input features, which accounts for cross-correlation between far-end speech and multiple microphones, essential for designing an efficient multi-channel AEC system.</li>
           <li>We extend our recently proposed generalized spatio-temporal RNN beamformer (GRNNBF) to a joint spatio-temporal RNN AEC beamformer (JRNN-AEC-BF) for handling AEC and beamforming simultaneously using original and AEC processed signals.</li>
-          <li>We propose a double-talk detection transformer (DTDT) module based on the multi-head attention transformer structure, that computes attention over time while leveraging double-talk detection to suppress far-end residuals.</li>
+          <li>We employ a double-talk detection (DTD) module based on the multi-head attention and recurrent networks, that computes attention over time while leveraging double-talk detection to suppress far-end residuals.</li>
         </ol>
         </p>
 
@@ -86,7 +86,7 @@
         <p class="auto-style5">&nbsp;</p>
         <p class="style2", style="color:blue;"><strong><span class="auto-style6"><u>Model Architecture</u></span></strong></p>
         <p align="justify" class="auto-style5-j">
-        <center><img src="figures/Model_Arch.png" width="940" /></center>
+        <center><img src="figures/Model_Arch_v2.png" width="940" /></center>
         </p>
 
 
